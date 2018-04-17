@@ -17,6 +17,12 @@ var actors = []route{
 		Pattern: "",
 		Handler: updateAvatarUrl,
 	},
+	{
+		Name: "getActorsGroupByTotalEventsOrderByDesc",
+		Method: "GET",
+		Pattern: "",
+		Handler: getActorsGroupByTotalEventsOrderByDesc,
+	},
 }
 
 func updateAvatarUrl(c lib.AppContext, w http.ResponseWriter, r *http.Request) (int, error) {
@@ -37,5 +43,22 @@ func updateAvatarUrl(c lib.AppContext, w http.ResponseWriter, r *http.Request) (
 	_, err = events.UpdateAll(bson.M{"actor.id": actor.Id}, bson.M{"$set": bson.M{"actor.avatar_url": actor.Avatar}})
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	return http.StatusOK, nil
+}
+
+func getActorsGroupByTotalEventsOrderByDesc(c lib.AppContext, w http.ResponseWriter, r *http.Request) (int, error) {
+	var actors []models.Actor
+	session := c.DB.Session.Copy()
+	defer session.Copy()
+	events := session.DB(c.Config.Mongo.Db).C(models.EventsCollection)
+	pipe := []bson.M{
+		{"$group": bson.M{"_id": "$actor.id", "count": bson.M{"$sum": 1}, "created_at": bson.M{"$max": "$created_at"}, "login": bson.M{"$first": "$actor.login"}, "avatar_url": bson.M{"$first": "$actor.avatar_url"}}},
+		{"$sort": bson.M{"count": -1, "created_at": -1, "login": 1}},
+		{"$project": bson.M{"_id": 0, "id": "$_id", "login": 1, "avatar_url":1}},
+	}
+	events.Pipe(pipe).All(&actors)
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(actors)
 	return http.StatusOK, nil
 }
