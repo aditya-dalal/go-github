@@ -19,6 +19,6 @@ func eraseAllEvents(c lib.AppContext, w http.ResponseWriter, r *http.Request) (i
 	session := c.DB.Session.Copy()
 	defer session.Close()
 	events := session.DB(c.Config.Mongo.Db).C(models.EventsCollection)
-	events.Remove(nil)
+	events.RemoveAll(nil)
 	return http.StatusOK, nil
 }

@@ -1,6 +1,8 @@
 package lib
 
-import "net/http"
+import (
+	"net/http"
+)
 
 type AppHandler struct {
 	AppContext
@@ -12,6 +14,8 @@ func (h AppHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch status {
 		case http.StatusBadRequest:
+			w.WriteHeader(status)
+		case http.StatusNotFound:
 			w.WriteHeader(status)
 		default:
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
