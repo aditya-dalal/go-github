@@ -88,15 +88,25 @@ func getAllEventsForActor(c lib.AppContext, w http.ResponseWriter, r *http.Reque
 	events := session.DB(c.Config.Mongo.Db).C(models.EventsCollection)
 	vars := mux.Vars(r)
 	actorId, _ := strconv.Atoi(vars["actorID"])
+	var dbEvents = []models.DBEvent{}
 	var eventList = []models.Event{}
 	err := events.Find(bson.M{
 		"actor.id": actorId,
-	}).Sort("_id").All(&eventList)
+	}).Sort("_id").All(&dbEvents)
 	if err != nil {
 		return http.StatusInternalServerError, errors.New("Failed to insert event to db")
 	}
-	if len(eventList) == 0 {
+	if len(dbEvents) == 0 {
 		return http.StatusNotFound, errors.New("Actor not found")
+	}
+	for _, event := range dbEvents {
+		eventList = append(eventList, models.Event{
+			Id: event.Id,
+			Type: event.Type,
+			Actor: event.Actor,
+			Repo: event.Repo,
+			CreatedAt: models.JsonTime(event.CreatedAt.UTC()),
+		})
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
